@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    <script type="text/javascript" src="http://dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+    <script type="text/javascript">
+    var map = null;
+var apiKey="At2Os3ILN525gV-omyV1efXpHKqeNx9n2R83IWtTQVsdAtH6X0PnkeynHaJiNYh8";
+var currLat,currLon;
+
+function GetMap() {
+    // Initialize the map
+    map = new Microsoft.Maps.Map(document.getElementById("myMap"),
+        {credentials: apiKey});
+    navigator.geolocation.getCurrentPosition(function (position) {
+        currLat = position.coords.latitude;
+        currLon = position.coords.longitude;
+        console.log(currLat,currLon);
+        do_something(position.coords.latitude, position.coords.longitude);
+    });
+}
+
+
+function getHospitalCentres(){
+    var url= "http://spatial.virtualearth.net/REST/v1/data/f22876ec257b474b82fe2ffcb8393150/NavteqNA/" +
+        "NavteqPOIs?spatialFilter=nearby("+currLat+","+currLon+","+50+")&$filter=EntityTypeID%20eq%20%278060%27&" +
+        "$select=EntityID,DisplayName,Latitude,Longitude,__Distance&$top=3&$format=json&jsonp=jsonCallBackFunction&" +
+        "jsonso=jsonState&key="+   "AoF0d7MK9TuRk4Akflb-0HSFj7FyiURBmNQ1cn9EQ8D4OccJfRoormM-lumBRtMH";
+    httpGet(url);
+
+
+}
+
+
+function httpGet(theUrl)
+{
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = theUrl;
+    document.getElementsByTagName("head")[0].appendChild(script);
+    return false;
+}
+
+function jsonCallBackFunction(res){
+    var locations=[];
+
+    var resultsArray=res.d.results;
+    for(var i=0;i<resultsArray.length;i++){
+        locations[i] = new Microsoft.Maps.Location(resultsArray[i].Latitude,resultsArray[i].Longitude);
+    }
+    var polygoncolor = new Microsoft.Maps.Color(1,254,0,200);
+    var triangle = new Microsoft.Maps.Polygon(locations,{fillColor: "red", strokeColor: polygoncolor});
+
+    var polygonWithPins = new Microsoft.Maps.EntityCollection();
+    polygonWithPins.push(triangle);
+    for(var j=0;j<locations.length;j++){
+        polygonWithPins.push(new Microsoft.Maps.Pushpin(locations[j]));
+    }
+    map.entities.push(polygonWithPins)
+
+}
+
+
+function do_something(latitude,longitude){
+    // Define the pushpin location
+    var loc = new Microsoft.Maps.Location(latitude,longitude);
+    // Add a pin to the map
+    var pin = new Microsoft.Maps.Pushpin(loc);
+    map.entities.push(pin);
+    // Center the map on the location
+    map.setView({center: loc, zoom: 10});
+    document.getElementById('hospitalCentres').style.display="block";
+}
+
+
+
+
+    </script>
+</head>
+<body onload="GetMap();">
+<div id='myMap' style="position:relative; width:1500px; height:600px;"></div>
+
+<div id="hospitalCentres" >
+    <button type="button" onclick="getHospitalCentres()">  Get Hospital Centres   </button>
+</div>
+</body>
+</html>

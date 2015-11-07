@@ -1,0 +1,943 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+
+<head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    <script type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+
+    <script type="text/javascript">
+        var map = null;
+        var x = document.getElementById("demo");
+        var directionsManager;
+        var directionsErrorEventObj;
+        var directionsUpdatedEventObj;
+        var directionsManager1;
+        var directionsErrorEventObj1;
+        var directionsUpdatedEventObj1;
+        var currInfoBox;  //the pop up info box
+        var infoboxLayer = new Microsoft.Maps.EntityCollection();
+        navigator.geolocation.getCurrentPosition(locationHandler);
+        var lati;
+        var longi;
+        var locations = [];
+        var sortedArray = []
+        var arrayOfCoordinates = [];
+        var unSortedArray = [];
+
+        function locationHandler(position) {
+             lati = position.coords.latitude;
+             longi = position.coords.longitude;
+        }
+
+        //get map with current location as a center
+
+        function GetMap() {
+            // Set the map options
+
+            var mapOptions = {
+                credentials: "AvhtUM6Bv9OzmRtQiF7ToeVLK6NQ9k5YW56-UgjnjVTpAogYZyt098eB4-8dEfoK",
+                width:1400,
+                height: 500,
+                showBreadcrumb: true,
+                mapTypeId: Microsoft.Maps.MapTypeId.road
+            };
+
+            // Initialize the map
+            map = new Microsoft.Maps.Map(document.getElementById("mapDiv"), mapOptions);
+            loadTrafficModule();
+
+
+            // Initialize the location provider
+            var geoLocationProvider = new Microsoft.Maps.GeoLocationProvider(map);
+
+            navigator.geolocation.getCurrentPosition(function(position) {
+                currLat = position.coords.latitude;
+                currLon = position.coords.longitude;
+
+                do_something(position.coords.latitude, position.coords.longitude);
+            });
+
+            currInfoBox= new Microsoft.Maps.Infobox(new Microsoft.Maps.Location(0, 0), { visible: true });
+
+            
+            
+            infoboxLayer.push(currInfoBox);
+            
+
+
+        }
+
+                function trafficModuleLoaded()
+              {
+                setMapView();
+                showTrafficLayer();
+              }    
+
+               function loadTrafficModule()
+              {
+               Microsoft.Maps.loadModule('Microsoft.Maps.Traffic', { callback: trafficModuleLoaded });
+              }
+
+
+                    function setMapView()
+              {
+                map.setView({zoom: 10, center: new Microsoft.Maps.Location(37.3353, -121.8813)})
+              }  
+
+
+              function showTrafficLayer()
+              {
+                
+                var trafficLayer = new Microsoft.Maps.Traffic.TrafficLayer(map);
+                // show the traffic Layer
+                trafficLayer.show();
+              }
+
+
+  
+        //get center to current location
+
+
+        function getCenter() {
+
+            var latlon = map.getCenter();
+            alert('Your Lattitude is: ' + latlon.latitude + '\n' + 'Your Longitude is: ' + latlon.longitude);
+        }
+
+
+
+
+        function addDefaultPushpin() {
+
+            var pushpin = new Microsoft.Maps.Pushpin(geoLocationProvider.getCurrentPosition(), null);
+            map.entities.push(pushpin);
+        }
+
+        function updatePushpinLocation() {
+
+            var pushpin = new Microsoft.Maps.Pushpin(map.getCenter(), null);
+            map.entities.push(pushpin);
+            pushpin.setLocation(new Microsoft.Maps.Location(47.5, -122.33));
+            map.setView({
+                center: new Microsoft.Maps.Location(47.5, -122.33)
+            });
+        }
+
+
+        function getLocation() {
+            console.log(" in get location !")
+            if (navigator.geolocation) {
+
+                navigator.geolocation.watchPosition(showPosition);
+
+            } else
+
+            {
+                x.innerHTML = "Geolocation is not supported by this browser.";
+            }
+
+        }
+
+        function showPosition(position) {
+            console.log(" in show positions ")
+            var latttt = position.coords.latitude;
+            var longgg = position.coords.longitude;
+
+            x.innerHTML = "Latitude: " + position.coords.latitude +
+                    "<br>Longitude: " + position.coords.longitude;
+        }
+
+
+
+
+
+
+
+
+        function getHospitalCentres() {
+            console.log(" in get hospital centres !")
+            var url = "http://spatial.virtualearth.net/REST/v1/data/f22876ec257b474b82fe2ffcb8393150/NavteqNA/" +
+                    "NavteqPOIs?spatialFilter=nearby(" + currLat + "," + currLon + "," + 1000 + ")&$filter=EntityTypeID%20eq%20%278060%27&" +
+                    "$select=EntityID,DisplayName,Latitude,Longitude,__Distance&$top=10&$format=json&jsonp=jsonCallBackFunction&" +
+                    "jsonso=jsonState&key=" + "AvhtUM6Bv9OzmRtQiF7ToeVLK6NQ9k5YW56-UgjnjVTpAogYZyt098eB4-8dEfoK";
+
+            httpGet(url);
+        }
+
+
+
+
+
+        function httpGet(theUrl) {
+            console.log(" in http get")
+            var script = document.createElement("script");
+            script.type = "text/javascript";
+            script.src = theUrl;
+            document.getElementsByTagName("head")[0].appendChild(script);
+            return false;
+        }
+
+
+        function jsonCallBackFunction(res) {
+
+            console.log("in json call back function")
+            var resultsArray = res.d.results;
+            for (var i = 0; i < resultsArray.length; i++) {
+                locations[i] = new Microsoft.Maps.Location(resultsArray[i].Latitude, resultsArray[i].Longitude);
+                console.log(location[i] + "        ");
+            }
+            var polygoncolor = new Microsoft.Maps.Color(1, 254, 0, 200);
+            var triangle = new Microsoft.Maps.Polygon(locations, {
+                fillColor: "red",
+                strokeColor: polygoncolor
+            });
+
+            var polygonWithPins = new Microsoft.Maps.EntityCollection();
+            polygonWithPins.push(triangle);
+            for (var j = 0; j < locations.length; j++) {
+                polygonWithPins.push(new Microsoft.Maps.Pushpin(locations[j]));
+            }
+            map.entities.push(polygonWithPins)
+
+        }
+
+
+
+
+        function do_something(latitude, longitude) {
+            console.log(" in do something !")
+            // Define the pushpin location
+            var loc = new Microsoft.Maps.Location(latitude, longitude);
+            // Add a pin to the map
+            var pin = new Microsoft.Maps.Pushpin(loc);
+            map.entities.push(pin);
+            // Center the map on the location
+            map.setView({
+                center: loc,
+                zoom: 14
+            });
+            // document.getElementById('hospitalCentres').style.display = "block";
+        }
+
+
+
+
+
+        function createSearchManager1() {
+            console.log("in create search manager 1")
+            map.addComponent('searchManager', new Microsoft.Maps.Search.SearchManager(map));
+            searchManager1 = map.getComponent('searchManager');
+        }
+
+
+
+        function LoadSearchModule1() {
+            console.log(" in load search module !")
+            Microsoft.Maps.loadModule('Microsoft.Maps.Search', {
+                callback: searchRequest1
+            })
+        }
+
+
+        function searchRequest1() {
+            console.log(" in search request. ");
+            createSearchManager1();
+            var userData = {
+                name: 'Maps Test User',
+                id: 'XYZ'
+            };
+            var query = 'hospitals near current location';
+            var request = {
+                query: query,
+                count: 250,
+                startIndex: 0,
+                bounds: map.getBounds(),
+                callback: search_onSearchSuccess1,
+                errorCallback: search_onSearchFailure,
+                userData: userData
+            };
+            searchManager1.search(request);
+        }
+
+
+
+        //search success
+        function search_onSearchSuccess1(result, userData) {
+            document.getElementById("resultsButton").style.display="inline";
+            hospitalDetails=result.searchResults;
+
+            console.log(" in search on search success 1!");
+            map.entities.clear();
+            var searchResults = result.searchResults;
+            if (searchResults) {
+                for (var i = 0; i < searchResults.length; i++) {
+                    // alert(searchResults[i].website);
+                    search_createMapPin(searchResults[i]);
+                    console.log("search create map pin " + i );
+
+                }
+                if (result.searchRegion && result.searchRegion.mapBounds) {
+                    map.setView({
+                        bounds: result.searchRegion.mapBounds.locationRect
+                    });
+                } else {
+                    alert('No results returned, Please try after sometime.');
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        //search nearby Doctors
+
+        function createSearchManager() {
+            console.log("in create search manager")
+            map.addComponent('searchManager', new Microsoft.Maps.Search.SearchManager(map));
+            searchManager = map.getComponent('searchManager');
+        }
+
+
+
+        function LoadSearchModule() {
+            console.log(" in load search module !")
+            Microsoft.Maps.loadModule('Microsoft.Maps.Search', {
+                callback: searchRequest
+            })
+        }
+
+
+        function searchRequest() {
+            console.log(" in search request. ")
+            createSearchManager();
+            var userData = {
+                name: 'Maps Test User',
+                id: 'XYZ'
+            };
+            var query = 'doctors near current location';
+            var request = {
+                query: query,
+                count: 250,
+                startIndex: 0,
+                bounds: map.getBounds(),
+                callback: search_onSearchSuccess,
+                errorCallback: search_onSearchFailure,
+                userData: userData
+            };
+            searchManager.search(request);
+        }
+
+
+        var hospitalDetails;
+        //search success
+        function search_onSearchSuccess(result, userData) {
+            document.getElementById("resultsButton").style.display="inline";
+             hospitalDetails=result.searchResults;
+            console.log(" in search on search success !")
+            map.entities.clear();
+            var searchResults = result.searchResults;
+            if (searchResults) {
+                for (var i = 0; i < searchResults.length; i++) {
+                    // alert(searchResults[i].website);
+                    search_createMapPin(searchResults[i]);
+                    console.log("search result   "+JSON.stringify(searchResults[i]));
+                    console.log("search create map pin " + i );
+
+                }
+                if (result.searchRegion && result.searchRegion.mapBounds) {
+                    map.setView({
+                        bounds: result.searchRegion.mapBounds.locationRect
+                    });
+                } else {
+                    alert('No results returned, Please try after sometime.');
+                }
+            }
+        }
+
+
+
+        //create map pin on success on search
+
+        function search_createMapPin(result) {
+
+            if (result) {
+                var pin = new Microsoft.Maps.Pushpin(result.location, null);
+                Microsoft.Maps.Events.addHandler(pin, 'click', function() {
+                    search_showInfoBox(result)
+                });
+                map.entities.push(pin);
+            }
+        }
+
+
+
+        //show infobox at clicked place
+
+
+        function search_showInfoBox(result) {
+            if (currInfoBox) {
+                currInfoBox.setOptions({
+                    visible: true
+
+                });
+                map.entities.remove(currInfoBox);
+            }
+
+            function handlerEvent1 ()
+            {
+                console.log("in handler event 1")
+                result.location;
+                alert(result.website);
+                // console.log(result.website);
+                if (window.confirm('Really go to another page?'))
+                {
+                    window.open(result.website);
+                }
+                else
+                {
+
+                }
+            }
+
+            function handlerEvent2 ()
+            {
+                console.log("rrrrrr    "  + JSON.stringify(result.location));
+                alert('Get Direction?');
+                // console.log(result.website);
+                if (window.confirm('Do you really want to get directions?'))
+                {
+                    window.createDirections1(result);
+                }
+                else
+                {
+
+                }
+            }
+
+            console.log("in handler event 2.before currinfo box");
+            currInfoBox = new Microsoft.Maps.Infobox(
+                    result.location, {
+                        title: result.name,
+                        description: [" address: ", result.address,  result.city, ", " ,result.state,", " ,
+                            result.country, ". Phone no. :", result.phone,].join(' '),
+                        actions:[{label: 'Website', eventHandler: handlerEvent1}, {label: 'Get Direction', eventHandler: handlerEvent2}],
+
+                        showPointer: true,
+                        titleAction: null,
+                        titleClickHandler: null
+                    });
+            currInfoBox.setOptions({
+                visible: true,
+                height: 180,
+                width : 200
+            });
+
+
+            console.log("in handler event 2. after currinfo box");
+            map.entities.push(currInfoBox);
+        }
+
+
+        //search failure
+
+        function search_onSearchFailure(result, userData) {
+            console.log(" in search on search failure !")
+            alert('Search failed');
+        }
+
+
+
+
+
+        // http://dev.virtualearth.net/REST/v1/Locations/47.64054,-122.12934?o=xml&key=AvhtUM6Bv9OzmRtQiF7ToeVLK6NQ9k5YW56-//UgjnjVTpAogYZyt098eB4-8dEfoK
+
+
+
+        function getAddress() {
+            console.log("in get address !")
+            var urll = "http://dev.virtualearth.net/REST/v1/Locations/" +
+                    currLat + "," + currLon + "?o=xml&key=" + "AvhtUM6Bv9OzmRtQiF7ToeVLK6NQ9k5YW56-UgjnjVTpAogYZyt098eB4-8dEfoK";
+
+            httpGet(urll);
+        }
+
+
+        //create directions to nearest hospital
+
+
+        function createDirections() {
+            console.log("in create directions !")
+            if (!directionsManager) {
+                Microsoft.Maps.loadModule('Microsoft.Maps.Directions', {
+                    callback: createDrivingRoute
+                });
+            } else {
+                createDrivingRoute();
+            }
+        }
+
+
+
+        function createDrivingRoute() {
+            console.log("in create driving route !");
+            if (!directionsManager) {
+                console.log("in if of create driving route !");
+                createDirectionsManager();
+            }
+            directionsManager.resetDirections();
+
+            directionsManager.setRequestOptions({
+                routeMode: Microsoft.Maps.Directions.RouteMode.driving
+            });
+            var startWaypoint = new Microsoft.Maps.Directions.Waypoint({
+                location: new Microsoft.Maps.Location(
+                        currLat, currLon)
+
+            });
+
+
+
+                var first = sortedArray[0];
+
+                var index = unSortedArray.indexOf(first); 
+
+                console.log("index is : " + index);
+
+                console.log("array of coordinates at index is : "+ arrayOfCoordinates[index]);
+
+                var naya = arrayOfCoordinates[index];
+
+
+                
+                
+                var splittingNumber = String(naya).charAt(0);
+                var one_as_number = Number(splittingNumber);
+               
+                console.log("naya     " + one_as_number);
+
+
+
+            directionsManager.addWaypoint(startWaypoint);
+            var destinationWaypoint = new Microsoft.Maps.Directions.Waypoint({
+                location: new Microsoft.Maps.Location(
+                        naya[0], naya[1])
+            });
+
+            console.log("after new destinations waypoint");
+            directionsManager.addWaypoint(destinationWaypoint);
+
+            directionsManager.setRenderOptions({
+                itineraryContainer: document.getElementById('directionsItinerary')
+            });
+            alert('Calculating directions...');
+            console.log("after alerting calculating directions");
+            directionsManager.calculateDirections();
+        }
+
+
+
+        function createDirectionsManager() {
+            var displayMessage;
+            console.log("display message" + displayMessage);
+            console.log(" in create directions manager !")
+            if (!directionsManager) {
+                directionsManager = new Microsoft.Maps.Directions.DirectionsManager(map);
+                // console.log("directionsManager        " + JSON.stringify(directionsManager));
+                console.log("here");
+                displayMessage = 'Directions Module loaded\n';
+                displayMessage += 'Directions Manager loaded';
+            }
+            alert(displayMessage);
+            directionsManager.resetDirections();
+            directionsErrorEventObj = Microsoft.Maps.Events.addHandler(directionsManager, 'directionsError', function(arg) {
+                alert(arg.message)
+            });
+            directionsUpdatedEventObj = Microsoft.Maps.Events.addHandler(directionsManager, 'directionsUpdated', function() {
+                alert('Directions updated');
+                console.log("after directions updated");
+            });
+        }
+
+
+
+        //get directions manager1 after clicking on get directions on infobox
+
+
+
+
+        function createDirections1(result) {
+            console.log("in create directions 1");
+            if (!directionsManager1) {
+                Microsoft.Maps.loadModule('Microsoft.Maps.Directions', {
+                    callback: getRouteToLocation(result)
+                });
+            } else {
+                getRouteToLocation(result);
+            }
+        }
+
+
+
+
+
+
+
+
+        function getRouteToLocation(result){
+            console.log("in get Route To Location  ")
+            var la = result.location.latitude;
+            var lo = result.location.longitude;
+            console.log(JSON.stringify(result));
+
+            if (!directionsManager1) {
+                console.log("before");
+                createDirectionsManager1();
+                console.log("after");
+            }
+            directionsManager1.resetDirections();
+
+            directionsManager1.setRequestOptions({
+                routeMode: Microsoft.Maps.Directions.RouteMode.driving
+            });
+
+            var destination = new Microsoft.Maps.Directions.Waypoint({
+                location: new Microsoft.Maps.Location(currLat, currLon)
+            });
+            directionsManager1.addWaypoint(destination);
+
+            var start = new Microsoft.Maps.Directions.Waypoint({
+                location: new Microsoft.Maps.Location(
+                        la, lo)
+            });
+            directionsManager1.addWaypoint(start);
+            directionsManager1.setRenderOptions({
+                itineraryContainer: document.getElementById('directionsItinerary1')
+            });
+            alert('Calculating directions...');
+            directionsManager1.calculateDirections();
+
+        }
+
+
+
+
+
+        function createDirectionsManager1() {
+            var displayMessage1;
+            console.log("in create directions manager 1");
+            console.log("here");
+            if (!directionsManager1) {
+
+                directionsManager1 = new Microsoft.Maps.Directions.DirectionsManager(map);
+                console.log("here in 1");
+                console.log(directionsManager1);
+                displayMessage1 = 'Directions Module loaded\n';
+                displayMessage1 += 'Directions Manager loaded';
+            }
+            alert(displayMessage1);
+            directionsManager1.resetDirections();
+            directionsErrorEventObj1 = Microsoft.Maps.Events.addHandler(directionsManager1, 'directionsError', function(arg) {
+                alert(arg.message);
+            });
+            directionsUpdatedEventObj1 = Microsoft.Maps.Events.addHandler(directionsManager1, 'directionsUpdated', function() {
+                alert('Directions updated');
+
+            });
+
+
+
+        }
+
+
+        function showResults(){
+            document.getElementById("resultsTable").style.display="block";
+            for (var i = 0; i < hospitalDetails.length; i++) {
+                var desLt=hospitalDetails[i].location.latitude;
+                var desLgt=hospitalDetails[i].location.longitude;
+                var row = document.createElement("tr");
+                row.innerHTML =
+                        "<td>"+hospitalDetails[i].name+"</td>"+
+                        "<td>"+hospitalDetails[i].address+"</td>"
+
+                document.getElementById("resultDetails").appendChild(row);
+                httpGet(currLat,currLon,desLt,desLgt);
+
+            }
+        }
+
+        function httpGet(lat1,lgt1,lat2,lgt2){
+
+            var url="http://dev.virtualearth.net/REST/V1/Routes/Driving?wp.0="+lat1+","+lgt1+"&wp.1="+lat2+","+lgt2+"&avoid=minimizeTolls&key=AoF0d7MK9TuRk4Akflb-0HSFj7FyiURBmNQ1cn9EQ8D4OccJfRoormM-lumBRtMH&" +
+                    "jsonp=jsonCallBackFunction&jsono=jsonKey&distanceUnit=mi&durationUnit=Minute";
+
+            var script = document.createElement("script");
+
+            script.type = "text/javascript";
+
+            script.src = url;
+
+            document.getElementsByTagName("head")[0].appendChild(script);
+
+            return false;
+
+        }
+
+        
+
+        // function jsonCallBackFunction(res){
+        //     console.log("result is : " + JSON.stringify(res));
+
+
+        //     var retrievedObject=res.resourceSets[0].resources[0];
+        //     var row = document.createElement("tr");
+
+        //     arrayOfCoordinates.push(retrievedObject.routeLegs[0].actualEnd.coordinates);
+        //     console.log(arrayOfCoordinates);
+
+        //     console.log(arrayOfCoordinates);
+
+        //     var mixedNumericArray = [retrievedObject.travelDistance];
+
+        //     function compareNumbers(a, b) {
+        //                       return a - b;
+        //                     }
+        //     unSortedArray.push(retrievedObject.travelDistance);
+
+        //     console.log('unsorted Array join:', unSortedArray.join());
+
+        //     sortedArray.push(unSortedArray[0]);
+
+        //     console.log('mixedNumericArray:', sortedArray.join());
+
+        //     console.log('Sorted without a compare function:', unSortedArray.sort());
+
+        //     console.log('Sorted with compareNumbers:');
+
+        //     console.log("shortest route is: " + sortedArray[0]);
+
+        //     row.innerHTML = "<td>"+1+"</td>" +
+        //             "<td>"+retrievedObject.travelDistance+"</td>"+
+
+        //             "<td>"+Math.round(retrievedObject.travelDuration/60*100)/100+"</td>"+
+        //             "<td>"+Math.round(retrievedObject.travelDurationTraffic/60*100)/100+"</td>"+
+        //             "<td>"+ retrievedObject.trafficCongestion+"</td>";
+        //     document.getElementById("results").appendChild(row);
+        // }
+
+
+
+
+
+
+        function jsonCallBackFunction(res){
+
+
+
+            var retrievedObject=res.resourceSets[0].resources[0];
+            var row = document.createElement("tr");
+
+            arrayOfCoordinates.push(retrievedObject.routeLegs[0].actualEnd.coordinates);
+
+            unSortedArray.push(retrievedObject.travelDistance);
+            console.log("unSortedArray is " + unSortedArray.join());
+            console.log(arrayOfCoordinates.join());
+
+            var mixedNumericArray = [retrievedObject.travelDistance];
+
+            function compareNumbers(a, b) {
+                              return a - b;
+                            }
+            sortedArray.push(retrievedObject.travelDistance);
+
+            console.log('sorted array join is :', sortedArray.join());
+            console.log('Sorted without a compare function:', sortedArray.sort());
+            console.log('Sorted with compareNumbers:', sortedArray.sort(compareNumbers));
+            console.log("shortest route is: " + sortedArray[0]);
+
+            row.innerHTML =
+                    "<td>"+retrievedObject.travelDistance+"</td>"+
+
+                    "<td>"+Math.round(retrievedObject.travelDuration/60*100)/100+"</td>"+
+                    "<td>"+Math.round(retrievedObject.travelDurationTraffic/60*100)/100+"</td>"+
+                    "<td>"+ retrievedObject.trafficCongestion+"</td>";
+            document.getElementById("results").appendChild(row);
+        }
+
+
+
+
+
+
+
+    </script>
+
+
+</head>
+
+<body onload="GetMap();">
+
+<header id="header">
+    <div class="header_top">
+        <div class="container">
+
+            <div class="col-sm-6">
+                <div class="social-icons pull-right">
+
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="header-middle">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="logo pull-left">
+                        <h1><a href="#"></a></h1>
+                    </div>
+                    <div class="btn-group pull-right">
+                        <div class="btn-group">
+
+                        </div>
+
+                        <div class="btn-group">
+
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+
+
+    </div>
+    </div>
+    </div>
+</header>
+
+
+
+
+
+
+
+
+
+
+<input type="button" class= "btn btn-primary"value="Hospitals Nearby" onclick="LoadSearchModule1();" />
+
+<input type="button" class= "btn btn-success"value="Doctors Nearby" onclick="LoadSearchModule();" />
+
+<input type="button" class="btn btn-warning" value="Show Traffic Information" onclick="showTrafficLayer();" />
+
+<input type="button" class= "btn btn-info"value="Route to Nearest Emergency Service" onclick="createDirections();" />
+
+<input type="button" id="resultsButton" value="Details of Nearby Hospitals" onclick="showResults()" style="display: none" class="btn btn-primary" />
+
+                            <a href="/" class="btn btn-danger">Home</a>
+           
+
+<div id='mapDiv' style="position:relative; "></div>
+
+<div>
+    <div id='directionsItinerary'> </div>
+
+    <div id='directionsItinerary1'> </div>
+    <div class="clear"></div>
+
+</div>
+
+<div id="resultsTable" style="display:none;">
+    <div style="width:53%;float:left;" class="bs-example" data-example-id="hoverable-table">
+        <table class="table table-hover">
+            <thead>
+            <tr id="resultHeader">
+
+                <th>Name</th>
+                <th>Address</th>
+
+
+            </tr>
+            </thead>
+            <tbody id="resultDetails">
+
+
+            </tbody>
+        </table>
+    </div>
+    <div style="width:45%;float:left;" class="bs-example" data-example-id="hoverable-table">
+        <table class="table table-hover">
+            <thead>
+            <tr>
+
+                <th>Travel Distance (in Miles)</th>
+                <th>Travel Duration (in Minutes)</th>
+                <th>Duration with Traffic (in Minutes)</th>
+                <th>Traffic Congestion</th>
+            </tr>
+            </thead>
+            <tbody id="results">
+
+
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+<link rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap.min.css">
+<link rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/css/bootstrap-theme.min.css">
+<script
+        src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script
+        src="https://maxcdn.bootstrapcdn.com/bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<style>
+    #directionsItinerary{
+        width:49%;
+        float:left;
+    }
+    #directionsItinerary1{
+        width:49%;
+        float:right;
+    }
+    .clear{
+        clear:both;
+    }
+    #resultHeader th{
+        line-height: 40px;
+    }
+</style>
+</html>
