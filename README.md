@@ -2,9 +2,12 @@
 
 # Health Connect
 
+### Running application
+1. Clone the repository
+2. install node.js in local computer
+3. run node app.js in the folder containing project
 
-
-## Web Application to connect patient to the hospitals and doctors
+### Web application to connect patient to the hospitals and doctors
 
 1. Created web application to help users find fastest route to the nearest hospitals and doctors.
 2. User can view nearest doctors and hospitals near their current location
@@ -14,7 +17,7 @@
 
 
 
-## Development
+### Development
 1. Used node.js as a backend engine.
 2. Bing Maps API to display map and find information about health centers.
 3. Javascript for retrieving JSON data obtained with Bing API.
